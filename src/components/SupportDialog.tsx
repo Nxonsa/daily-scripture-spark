@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,26 +30,56 @@ const supportQuestions = [
 ];
 
 const supportVerses = {
-  Overwhelmed: {
-    verse: "Cast your burden on the Lord, and he will sustain you; he will never permit the righteous to be moved.",
-    reference: "Psalm 55:22",
-  },
-  Anxious: {
-    verse: "When anxiety was great within me, your consolation brought me joy.",
-    reference: "Psalm 94:19",
-  },
-  Sad: {
-    verse: "The Lord is near to the brokenhearted and saves the crushed in spirit.",
-    reference: "Psalm 34:18",
-  },
-  Lost: {
-    verse: "I will instruct you and teach you in the way you should go; I will counsel you with my eye upon you.",
-    reference: "Psalm 32:8",
-  },
-  Hopeful: {
-    verse: "But those who hope in the Lord will renew their strength. They will soar on wings like eagles; they will run and not grow weary, they will walk and not be faint.",
-    reference: "Isaiah 40:31",
-  },
+  Overwhelmed: [
+    {
+      verse: "Cast your burden on the Lord, and he will sustain you; he will never permit the righteous to be moved.",
+      reference: "Psalm 55:22",
+    },
+    {
+      verse: "Come to me, all who labor and are heavy laden, and I will give you rest.",
+      reference: "Matthew 11:28",
+    },
+  ],
+  Anxious: [
+    {
+      verse: "When anxiety was great within me, your consolation brought me joy.",
+      reference: "Psalm 94:19",
+    },
+    {
+      verse: "Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God.",
+      reference: "Philippians 4:6",
+    },
+  ],
+  Sad: [
+    {
+      verse: "The Lord is near to the brokenhearted and saves the crushed in spirit.",
+      reference: "Psalm 34:18",
+    },
+    {
+      verse: "He will wipe away every tear from their eyes, and death shall be no more, neither shall there be mourning, nor crying, nor pain anymore.",
+      reference: "Revelation 21:4",
+    },
+  ],
+  Lost: [
+    {
+      verse: "I will instruct you and teach you in the way you should go; I will counsel you with my eye upon you.",
+      reference: "Psalm 32:8",
+    },
+    {
+      verse: "Your word is a lamp to my feet and a light to my path.",
+      reference: "Psalm 119:105",
+    },
+  ],
+  Hopeful: [
+    {
+      verse: "But those who hope in the Lord will renew their strength. They will soar on wings like eagles; they will run and not grow weary, they will walk and not be faint.",
+      reference: "Isaiah 40:31",
+    },
+    {
+      verse: "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope.",
+      reference: "Jeremiah 29:11",
+    },
+  ],
 };
 
 export const SupportDialog = () => {
@@ -58,11 +88,26 @@ export const SupportDialog = () => {
     verse: string;
     reference: string;
   } | null>(null);
+  const [hourlyIndex, setHourlyIndex] = useState(0);
+
+  useEffect(() => {
+    // Update verse index every hour
+    const now = new Date();
+    setHourlyIndex(now.getHours());
+
+    const interval = setInterval(() => {
+      const currentHour = new Date().getHours();
+      setHourlyIndex(currentHour);
+    }, 3600000); // Check every hour
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSelection = (questionId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
     if (questionId === "feeling") {
-      setSupportVerse(supportVerses[answer as keyof typeof supportVerses]);
+      const verses = supportVerses[answer as keyof typeof supportVerses];
+      setSupportVerse(verses[hourlyIndex % verses.length]);
     }
   };
 

@@ -1,7 +1,23 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DailyVerse } from "@/components/DailyVerse";
 import { SupportDialog } from "@/components/SupportDialog";
 import { NotificationBar } from "@/components/NotificationBar";
+
+const dailyVerses = [
+  {
+    verse: "Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.",
+    reference: "Proverbs 3:5-6",
+  },
+  {
+    verse: "Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.",
+    reference: "Joshua 1:9",
+  },
+  {
+    verse: "The Lord is my shepherd, I lack nothing. He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul.",
+    reference: "Psalm 23:1-3",
+  },
+  // Add more verses as needed
+];
 
 const getMonthlyTheme = () => {
   const themes = {
@@ -23,13 +39,30 @@ const getMonthlyTheme = () => {
   return themes[currentMonth as keyof typeof themes];
 };
 
-const todaysVerse = {
-  verse: "Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.",
-  reference: "Proverbs 3:5-6",
+const getDailyVerse = () => {
+  // Use the date to create a consistent index for the day
+  const today = new Date();
+  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+  return dailyVerses[dayOfYear % dailyVerses.length];
 };
 
 const Index = () => {
+  const [todaysVerse, setTodaysVerse] = useState(getDailyVerse());
   const theme = getMonthlyTheme();
+
+  useEffect(() => {
+    // Update verse when the date changes
+    const checkDate = () => {
+      const newVerse = getDailyVerse();
+      if (newVerse.verse !== todaysVerse.verse) {
+        setTodaysVerse(newVerse);
+      }
+    };
+
+    // Check every minute for date changes
+    const interval = setInterval(checkDate, 60000);
+    return () => clearInterval(interval);
+  }, [todaysVerse]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
