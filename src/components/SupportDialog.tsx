@@ -9,6 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const supportQuestions = [
   {
@@ -89,6 +95,21 @@ export const SupportDialog = () => {
     reference: string;
   } | null>(null);
   const [hourlyIndex, setHourlyIndex] = useState(0);
+  const [pin, setPin] = useState("");
+  const [recoveryPhrase, setRecoveryPhrase] = useState("");
+  const [isFirstTime, setIsFirstTime] = useState(true);
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const savedPin = localStorage.getItem("support_pin");
+    const savedPhrase = localStorage.getItem("recovery_phrase");
+    if (savedPin && savedPhrase) {
+      setIsFirstTime(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Update verse index every hour
@@ -111,12 +132,175 @@ export const SupportDialog = () => {
     }
   };
 
+  const handlePinSubmit = (enteredPin: string) => {
+    if (isFirstTime) {
+      const randomPhrase = generateRecoveryPhrase();
+      localStorage.setItem("support_pin", enteredPin);
+      localStorage.setItem("recovery_phrase", randomPhrase);
+      setRecoveryPhrase(randomPhrase);
+      setIsAuthenticated(true);
+      setIsFirstTime(false);
+    } else {
+      const savedPin = localStorage.getItem("support_pin");
+      if (enteredPin === savedPin) {
+        setIsAuthenticated(true);
+        setPinError("");
+      } else {
+        setPinError("Incorrect PIN");
+      }
+    }
+  };
+
+  const handleRecovery = (phrase: string) => {
+    const savedPhrase = localStorage.getItem("recovery_phrase");
+    if (phrase.toLowerCase() === savedPhrase?.toLowerCase()) {
+      setIsFirstTime(true);
+      setShowRecovery(false);
+      setShowPinInput(true);
+      localStorage.removeItem("support_pin");
+    } else {
+      setPinError("Incorrect recovery phrase");
+    }
+  };
+
+  const generateRecoveryPhrase = () => {
+    const words = [
+      "faith", "hope", "love", "peace", "grace",
+      "mercy", "truth", "light", "wisdom", "joy"
+    ];
+    return `${words[Math.floor(Math.random() * words.length)]} ${
+      words[Math.floor(Math.random() * words.length)]
+    }`;
+  };
+
+  const renderPinSetup = () => (
+    <div className="space-y-4">
+      <h4 className="text-center font-medium">
+        {isFirstTime ? "Create your 4-digit PIN" : "Enter your PIN"}
+      </h4>
+      <div className="flex justify-center">
+        <InputOTP
+          maxLength={4}
+          value={pin}
+          onChange={(value) => {
+            setPin(value);
+            if (value.length === 4) {
+              handlePinSubmit(value);
+            }
+          }}
+          render={({ slots }) => (
+            <InputOTPGroup className="gap-2">
+              {slots.map((slot, idx) => (
+                <InputOTPSlot key={idx} {...slot} />
+              ))}
+            </InputOTPGroup>
+          )}
+        />
+      </div>
+      {pinError && (
+        <p className="text-red-500 text-sm text-center">{pinError}</p>
+      )}
+      {!isFirstTime && (
+        <Button
+          variant="link"
+          className="w-full"
+          onClick={() => setShowRecovery(true)}
+        >
+          Forgot PIN?
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderRecovery = () => (
+    <div className="space-y-4">
+      <h4 className="text-center font-medium">Enter Recovery Phrase</h4>
+      <Input
+        type="text"
+        placeholder="Enter your recovery phrase"
+        onChange={(e) => handleRecovery(e.target.value)}
+      />
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => setShowRecovery(false)}
+      >
+        Back to PIN
+      </Button>
+    </div>
+  );
+
+  const renderContent = () => {
+    if (!isAuthenticated) {
+      if (showRecovery) {
+        return renderRecovery();
+      }
+      return renderPinSetup();
+    }
+
+    if (isFirstTime) {
+      return (
+        <div className="space-y-4">
+          <div className="bg-muted p-4 rounded-lg">
+            <p className="font-medium">Your Recovery Phrase:</p>
+            <p className="text-lg mt-2">{recoveryPhrase}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Please save this phrase somewhere safe. You'll need it if you forget your PIN.
+            </p>
+          </div>
+          <Button onClick={() => setIsAuthenticated(true)}>Continue</Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 py-4">
+        {supportQuestions.map((q) => (
+          <div key={q.id} className="space-y-4">
+            <h4 className="font-medium text-sm">{q.question}</h4>
+            <div className="flex flex-wrap gap-2">
+              {q.options.map((option) => (
+                <Button
+                  key={option}
+                  variant={answers[q.id] === option ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleSelection(q.id, option)}
+                  className="transition-all hover:scale-105"
+                >
+                  {option}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {supportVerse && (
+          <Card className="p-4 mt-4 animate-fade-in">
+            <blockquote className="font-serif text-lg">
+              "{supportVerse.verse}"
+            </blockquote>
+            <p className="text-right text-sm text-muted-foreground mt-2">
+              - {supportVerse.reference}
+            </p>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button
           variant="outline"
           className="w-full sm:w-auto transition-all hover:scale-105"
+          onClick={() => {
+            setShowPinInput(true);
+            setPin("");
+            setPinError("");
+            if (!isFirstTime && !isAuthenticated) {
+              setShowRecovery(false);
+            }
+          }}
         >
           Need Support?
         </Button>
@@ -126,36 +310,7 @@ export const SupportDialog = () => {
           <DialogTitle>Find Comfort in Scripture</DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] px-1">
-          <div className="space-y-6 py-4">
-            {supportQuestions.map((q) => (
-              <div key={q.id} className="space-y-4">
-                <h4 className="font-medium text-sm">{q.question}</h4>
-                <div className="flex flex-wrap gap-2">
-                  {q.options.map((option) => (
-                    <Button
-                      key={option}
-                      variant={answers[q.id] === option ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleSelection(q.id, option)}
-                      className="transition-all hover:scale-105"
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {supportVerse && (
-              <Card className="p-4 mt-4 animate-fade-in">
-                <blockquote className="font-serif text-lg">
-                  "{supportVerse.verse}"
-                </blockquote>
-                <p className="text-right text-sm text-muted-foreground mt-2">
-                  - {supportVerse.reference}
-                </p>
-              </Card>
-            )}
-          </div>
+          {renderContent()}
         </ScrollArea>
       </DialogContent>
     </Dialog>
